@@ -111,8 +111,17 @@ def bigramSourceModel(segmentations):
     fsa = FSM.FSM(isProbabilistic=True)
     fsa.setInitialState('start')
     fsa.setFinalState('end')
-    ### TODO: YOUR CODE HERE
-    util.raiseNotDefined()
+    
+    # Character states in bigram model
+    for char in lm['start']:
+        fsa.addEdge('start', char, char, lm['start'][char])
+
+    # Transitions between character states or to 'end'
+    for char in lm.keys():
+        if not char == 'start':
+            for second_char in lm[char]:        
+                fsa.addEdge(char, second_char, second_char, prob=lm[char][second_char])
+    
     return fsa
 
 def buildSegmentChannelModel(words, segmentations):
@@ -120,7 +129,8 @@ def buildSegmentChannelModel(words, segmentations):
     fst.setInitialState('start')
     fst.setFinalState('end')
     ### TODO: YOUR CODE HERE
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+    
 
     return fst
 
@@ -132,7 +142,7 @@ def fancyChannelModel(words, segmentations):
     raise Exception("fancyChannelModel not defined")
 
     
-def runTest(trainFile='bengali.train', devFile='bengali.dev', channel=stupidChannelModel, source=stupidSourceModel):
+def runTest(trainFile='bengali.train', devFile='bengali.dev', channel=stupidChannelModel, source=bigramSourceModel):
     (words, segs) = readData(trainFile)
     (wordsDev, segsDev) = readData(devFile)
     fst = channel(words, segs)
