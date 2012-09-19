@@ -1,0 +1,426 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>CS 723 Project 1: Morphological Disambiguation</title>
+<style type="text/css">
+<!--
+.style1 {
+font-style: italic;
+font-weight: bold;
+}
+-->
+</style>
+<link href="project.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+<h2>CS 723 Project 1: Morphological Disambiguation</h2>
+
+<h3>Table of Contents</h3>
+<ul>
+<li><a href="#intro">Introduction</a>
+<li><a href="#englishgen">Morphological Generation in English (25%)</a>
+<li><a href="#englishdis">Morphological Disambiguation in English (25%)</a>
+<li><a href="#unsupervised">Segmenting an Unknown Language (50%)</a>
+</ul>
+
+<h3><a name="intro">Introduction</a></h3>
+
+This project is about morphological analysis/generation using finite
+state machines.  We'll use
+the <a href="http://www.isi.edu/licensed-sw/carmel/">Carmel</a>
+finite-state toolkit for doing computations.  If you want more details
+about carmel and how to run it <i>manually</i> (rather than through
+our Python interface: for instance, to help debug),
+see <a href="http://www.isi.edu/licensed-sw/carmel/carmel-tutorial2.pdf">the
+tutorial</a>.  Carmel is already installed on the junkfood machines
+in <tt>/fs/junkfood/hal/bin</tt> and on UMIACS machines
+in <tt>/nfshomes/hal/bin</tt>.  Or you can install it on your own
+machine.  <b>Note that you'll need to edit FST.py to point to your
+correct carmel installation!</b>
+
+<p>The code for this project consists of several Python files, some of
+which you will need to read and understand in order to complete the
+assignment, and some of which you can ignore. You can download all the
+code and supporting files (including this description) as
+a <a href="p1.tar.gz">tar archive</a>.
+
+<table border="0" cellpadding="10">
+<tr><td colspan="2"><b>Files you'll edit:</b></td></tr>
+  
+  <tr><td><code>generate.py</code></td>
+  <td>The place where you'll put your code for part I (generation).</td></tr>
+  
+  <tr><td><code>analyze.py</code></td>
+  <td>The place where you'll put your code for part II (analysis).</td></tr>
+  
+  <tr><td><code>bengali.py</code></td>
+  <td>The place where you'll put your code for part III (segmenting an unknown language).</td></tr>
+  
+<tr><td colspan="2"><b>Files you might want to look at:</b></td></tr>
+  
+  <tr><td><code>FSM.py</code></td>
+  <td>Code for interfacing python with <a href="http://www.isi.edu/licensed-sw/carmel/">carmel</a>.</td></tr>
+
+  <tr><td><code>util.py</code></td>
+  <td>A handful of useful utility functions: these will undoubtedly be helpful to you, so take a look!</td></tr>
+</table>
+<p>
+
+<p><strong>Evaluation:</strong> Your code will be autograded for
+technical correctness. Please <em>do not</em> change the names of any
+provided functions or classes within the code, or you will wreak havoc
+on the autograder.  However, the correctness of your implementation --
+not the autograder's output -- will be the final judge of your score.
+If necessary, we will review and grade assignments individually to
+ensure that you receive due credit for your work.
+
+<p><strong>Academic Dishonesty:</strong> We will be checking your code
+against other submissions in the class for logical redundancy. If you
+copy someone else's code and submit it with minor changes, we will
+know. These cheat detectors are quite hard to fool, so please don't
+try. We trust you all to submit your own work only; <em>please</em>
+don't let us down. If you do, we will pursue the strongest
+consequences available to us.
+
+<p><strong>Getting Help:</strong> You are not alone!  If you find
+yourself stuck on something, contact the course staff for help.
+Office hours, class time, and Piazza are there for your support;
+please use them.  If you can't make our office hours, let us know and
+we will schedule more.  We want these projects to be rewarding and
+instructional, not frustrating and demoralizing.  But, we don't know
+when or how to help unless you ask.  One more piece of advice: if you
+don't know what a variable is, print it out.
+
+<h3><a name="englishgen"></a>Morphological Generation in English <i>(25%)</i></h3>
+
+English is one of the least interesting languages morphologically, but
+it's a good warm up (Chinese, Vietnamese are even less interesting).
+We're going to work with the following
+lexicon: <tt>panic</tt>, <tt>picnic</tt>, <tt>ace</tt>, <tt>pack</tt>, <tt>pace</tt>, <tt>traffic</tt>, <tt>lilac</tt>, <tt>ice</tt>, <tt>spruce</tt>, <tt>frolic</tt>.
+Our goal is to be able to generate things like "spruced" (from
+"spruce+d") and "picnicking" (from "picnic+ed") using regular
+expressions (which are magically tranformed into finite state
+machines).<p/>
+
+The shell for this part of the assignment is in <tt>generate.py</tt>.
+Essentially all you need to do is implement a rule that will correctly
+handle c/ck alternations.  Before doing this, you should be able to
+execute the following to see (incorrect) outputs:<p/>
+
+<pre>
+>>> runTest()
+panic 	-> panic
+panic+ed 	-> paniced
+panic+ing 	-> panicing
+panic+s 	-> panics
+picnic 	-> picnic
+picnic+ed 	-> picniced
+picnic+ing 	-> picnicing
+picnic+s 	-> picnics
+...
+frolic 	-> frolic
+frolic+ed 	-> froliced
+frolic+ing 	-> frolicing
+frolic+s 	-> frolics
+</pre>
+
+If you need help with regular expression syntax in Python,
+see <a href="http://docs.python.org/library/re.html">here</a>.  Note
+that you will be graded not just on the words in this list, but
+perhaps other words.  (We will not test you on other suffixes
+though.)<p/>
+
+<h3><a name="englishdis"></a>Morphological Analysis in English <i>(25%)</i></h3>
+
+In keeping with the theme of morphology in an uninteresting language
+(don't worry, something more interesting is coming!) we will now do
+some morphological analysis in English using <i>real</i> finite state
+machines.  You'll need
+the <a href="http://www.isi.edu/licensed-sw/carmel/">Carmel</a> finite
+state toolkit to conduct this assignment.  There's a binary on the
+junkfood machines in <tt>/fs/junkfood/hal/bin/carmel</tt> and on
+UMIACS machines in <tt>/nfshomes/hal/bin/carmel</tt>.  You shouldn't
+need to interact directly with Carmel, but only through a Python
+wrapper in <tt>FSM.py</tt>.<p/>
+
+To get a sense of how to use <tt>FSM</tt>, we'll create a simple
+transducer that de-vowelizes strings.  Specifically, given a string
+like "dragon", it will map it to all strings that are missing zero or
+more vowels, in this case the four strings "dragon", "dragn", "drgon"
+and "drgn".  We'll then run this FST on the string "dragon".<p/>
+
+<pre>
+>>> fst = FSM(isTransducer=True)
+>>> fst.addEdge('start', 'start', '.', '.')
+>>> fst.addEdge('start', 'start', None, 'a')
+>>> fst.addEdge('start', 'start', None, 'e')
+>>> fst.addEdge('start', 'start', None, 'i')
+>>> fst.addEdge('start', 'start', None, 'o')
+>>> fst.addEdge('start', 'start', None, 'u')
+>>> fst.setInitialState('start')
+>>> fst.setFinalState('start')
+>>> runFST([fst], ['dragon'], maxNumPaths=10)
+executing:  ~hal/bin/carmel -rIQEb -k 10 .tmp.fst.0 .tmp.fst.strings > .tmp.output
+Input line 1: "d" "r" "a" "g" "o" "n"
+	(7 states / 8 arcs)
+Derivations found for all 1 inputs
+Viterbi (best path) product of probs=1, probability=2^0 per-input-symbol-perplexity(N=6)=2^-0 per-line-perplexity(N=1)=2^-0
+[['drgn', 'drgon', 'dragn', 'dragon']]
+</pre>
+
+We first create a FSM telling it that it's a transducer.  We then add
+a bunch of edges.  The first edge we add is from a state named "start"
+to itself.  The "'.', '.'" is syntactic sugar saying "accept any
+character (a-z) and emit the same character."  There are then edges
+for each vowel, where we read nothing (None means "epsilon") and
+produce a vowel.  Finally, we set the initial and final states and the
+run it on the string "dragon", returning at most 10 paths.  In this
+case, the paths are exactly what we want.  You can ignore the rest of
+the carmel output <tt>:)</tt>.  One thing to keep in mind is the order
+of composition: the strings will be applied on the RIGHT of the FST,
+which is why we map epsilon TO vowel, rather than the other way
+around.<p/>
+
+We can also make an acceptor that will only accept two strings:
+"dragn" and "drgon" (just for fun).  We could do this by hand, but
+that would be tedious, so there's a bit of helper code:<p/>
+
+<pre>
+>>> fsa = FSM()
+>>> fsa.addEdgeSequence('start', 'end', 'dragn')
+>>> fsa.addEdgeSequence('start', 'end', 'drgon')
+>>> fsa.setInitialState('start')
+>>> fsa.setFinalState('end')
+>>> runFST([fsa], ['drgn', 'dragn', 'drgon', 'dragon'], maxNumPaths=10)
+executing:  ~hal/bin/carmel -rIQEb -k 10 .tmp.fst.0 .tmp.fst.strings > .tmp.output
+Input line 1: "d" "r" "g" "n"
+	(0 states / 0 arcs)
+Empty or invalid result of composition with transducer ".tmp.fst.0".
+Input line 2: "d" "r" "a" "g" "n"
+	(8 states / 7 arcs reduce-> 6/5)
+Input line 3: "d" "r" "g" "o" "n"
+	(8 states / 7 arcs reduce-> 6/5)
+Input line 4: "d" "r" "a" "g" "o" "n"
+	(0 states / 0 arcs)
+Empty or invalid result of composition with transducer ".tmp.fst.0".
+No derivations found for 2 of 4 inputs
+Viterbi (best path) product of probs=1, probability=2^0 per-input-symbol-perplexity(N=20)=2^-0 per-line-perplexity(N=2)=2^-0, excluding 2 0 probabilities (i.e. real ppx is infinite).
+[[], ['dragn'], ['drgon'], []]
+</pre>
+
+The final value shows that it only accepted the middle two.  We can
+run these together (composition) as:<p/>
+
+<pre>
+>>> runFST([fsa, fst], ['dragon'], maxNumPaths=10)
+executing:  ~hal/bin/carmel -rIQEb -k 10 .tmp.fst.0 .tmp.fst.1 .tmp.fst.strings > .tmp.output
+Input line 1: "d" "r" "a" "g" "o" "n"
+	(7 states / 8 arcs)
+	(14 states / 14 arcs reduce-> 12/12)
+Derivations found for all 1 inputs
+Viterbi (best path) product of probs=1, probability=2^0 per-input-symbol-perplexity(N=6)=2^-0 per-line-perplexity(N=1)=2^-0
+[['drgon', 'dragn']]
+</pre>
+
+Voila!  If you want to see what the FSMs look like, you can open
+the <tt>.tmp.fst.#</tt> files.<p/>
+
+Now, on to the real fun.  You job is to implement,
+in <tt>analyze.py</tt>, finite state maches that mimic what you did
+using regular expressions.  Most of this is written for you.  The two
+things you have to do are correctly build the source model and, just
+like before, implement is the "ck" case in the channel model.  Once
+you've done this, you should be able to run the simpleTest function (I
+have removed Carmel output for clarity):
+
+<pre>
+>>> simpleTest()
+==== Trying source model on strings 'ace+ed' ====
+==== Result:  [['ace+ed']]  ====
+==== Trying source model on strings 'panic+ing' ====
+==== Result:  [['panic+ing']]  ====
+==== Generating random paths for 'aced', using only channel model ====
+==== Result:  [['a+ced', 'ace+ed', 'ac+ed', 'a+ced', 'ace+ed', 'aced', 'ac+ed', 'a+ced', 'ace+d', 'a+ced']]  ====
+==== Disambiguating a few phrases: aced, panicked, paniced, sprucing ====
+==== Result:  [['ace+ed'], ['panic+ed'], ['panic+ed'], ['spruce+ing']]  ====
+</pre>
+
+Again, you'll be tested on more words, but not more suffixes.<p/>
+
+
+<h3><a name="unsupervised"></a>Segmenting an Unknown Language <i>(50%)</i></h3>
+
+For this part of the project, we will attempt to segment a language
+(<a href="http://en.wikipedia.org/wiki/Bengali_language">Bengali</a>
+--
+some <a href="http://wals.info/languoid/lect/wals_code_ben">linguistic
+info</a> and
+some <a href="http://www.ethnologue.com/show_language.asp?code=ben">usage
+info</a>) that no one in this class knows (so it's a level playing
+field).  In this setting, the data I provide you with is just a list
+of inflected forms and their (most probable) analyses.  Your job is to
+<i>learn</i> a morphological segmenter for this data.  Note that I'll
+tell you ahead of time that this language does not have infixes, which
+would make life much more complicated.  To make life easier for you,
+we've removed the interaction between morphology and
+phonology/orthography (ala English's "deny+al" -&gt; "denial").<p/>
+
+The data you should use to build your analyzer is
+in <tt>bengali.train</tt>.  You can evaluate your own performance by
+running it on <tt>bengali.dev</tt>.  Your final task is to submit
+segmentations on <tt>bengali.test</tt>, for which I have <i>not</i>
+given you the correct answers.<p/>
+
+To get a feel for this problem, open up <tt>bengali.py</tt>.  If you
+execute <tt>runTest</tt> you should be see it build a model, execute
+it on the development data (get an f-score of zero), retrain the
+model, and re-test (and again get an f-score of zero).  Your job is to
+make better source and channel models so you can get an f-score above
+zero.</p>
+
+The <b>baseline</b> system you must implement is a character-bigram
+source model (to be implemented in <tt>bigramSourceModel</tt>) and a
+segment-based channel model (to be implemented
+in <tt>buildSegmentChannelModel</tt>).  Most of the bigram source
+model code is given to you: in particular, we've computed the language
+model for you: all you have to do is convert it to a FSA.
+The <tt>lm</tt> data structure is a hash of counters,
+where <tt>lm[h][c]</tt> is the probability of c in the history h.
+Note that the "end of word" token is called "end" and you'll probably
+have to handle this specially.</p>
+
+For <tt>buildSegmentChannelModel</tt>, what we want to do is take all
+the known segments and build little pieces of an FST just to recognize
+those, and then connect them with "+"s.  For instance, if
+the <i>only</i> segment you saw was "un+necessari+ly", then what I
+want to do is build a path that will accept "un" and then be in a
+"end-of-segment" state.  Similarly it can (start at "start") and
+accept "necessari"; and similarly for "ly".  From this
+"end-of-segment" state, it should be able to either end (transition to
+an end state) <i>or</i> go back to the start state after spitting out
+a "+".  In regular expression terms, this machine should accept the
+language "(un|necessari|ly)?(+(un|necessari|ly)*)".  In other words,
+it should accept any combination of "un", "necessari" and "ly" strung
+together, separated by "+"s.<p/>
+
+Now, that model alone won't work very well for lots of reasons, but
+the one that you should be most worried about is that <i>it cannot
+  accept any possible segmentation</i>.  This means it will have
+probability zero events, which is bad news.  So what you should do to
+avoid this is "smooth" the model.  In particular, add the ability to
+self-transition start-to-start on any "x -> x" or "A -> A" transition,
+including "+" -> None.  One thing to be sure you do is give small
+probability to the "smoothing" events: when you
+call <tt>fst.addEdge(...)</tt>, add "<tt>, prob=0.1</tt>" so that it
+tries to avoid this if at all possible.<p/>
+
+If you implement this precisely identically to mine (which is not
+necessary: just so long as you get the same ballpart results), you
+should be able to rerun the test using these models):
+
+<pre>
+>>> output = runTest(source=bigramSourceModel,channel=buildSegmentChannelModel)
+executing:  ~hal/bin/carmel -rIQEb -k 1 .tmp.fst.0 .tmp.fst.1 .tmp.fst.strings > .tmp.output
+before training, P/R/F =  (1.0, 0.0, 0.0)
+executing:  ~hal/bin/carmel -rtDHJ .tmp.fst .tmp.fst.strings > .tmp.output.fst
+
+Using random seed -R 2648671306
+.....................................................................1540
+.................................................................
+i=1 (rate=1): probability=2^-36656.2 per-symbol-perplexity(N=25411)=2^1.44253 per-example-perplexity(N=2975)=2^12.3214 (new best)
+Initial best start point ppx=2^12.3214
+.....................................................................1540
+.................................................................
+i=2 (rate=1): probability=2^-9.3797e-11 per-symbol-perplexity(N=25411)=2^3.6912e-15 per-example-perplexity(N=2975)=2^3.15284e-14 (new best) (relative-perplexity-ratio=0)
+Converged - maximum weight change less than 0.0001 after 2 iterations.
+Setting weights to model with lowest per-example-perplexity ( = prod[modelprob(example)]^(-1/num_examples) = 2^(-log_2(p_model(corpus))/N) = 2^3.15284e-14
+Training took 48.191 sec, memory +7.633M (3.081M -> 10.71M); from OS: +7.121M (149.4M -> 156.5M)
+
+executing:  ~hal/bin/carmel -rIQEb -k 1 .tmp.fst.0 .tmp.fst.1 .tmp.fst.strings > .tmp.output
+after  training, P/R/F =  (0.76000000000000001, 0.40425531914893614, 0.52777777777777779)
+</pre>
+
+Nicely, performance has increase to an f-score of about 52%!  If you
+only use the fancy channel model, or only use the fancy source model,
+you should get (roughly) the following results:
+
+<pre>
+>>> output = runTest(source=bigramSourceModel)
+executing:  ~hal/bin/carmel -rIQEb -k 1 .tmp.fst.0 .tmp.fst.1 .tmp.fst.strings > .tmp.output
+before training, P/R/F =  (0.89473684210526316, 0.040189125295508277, 0.076923076923076927)
+executing:  ~hal/bin/carmel -rtDHJ .tmp.fst .tmp.fst.strings > .tmp.output.fst
+
+Using random seed -R 3796216269
+.....................................................................1540
+.................................................................
+i=1 (rate=1): probability=2^-1.01995e-10 per-symbol-perplexity(N=25411)=2^4.01382e-15 per-example-perplexity(N=2975)=2^3.42841e-14 (new best)
+Initial best start point ppx=2^3.42841e-14
+Converged - maximum weight change less than 0.0001 after 1 iterations.
+Setting weights to model with lowest per-example-perplexity ( = prod[modelprob(example)]^(-1/num_examples) = 2^(-log_2(p_model(corpus))/N) = 2^3.42841e-14
+Training took 20.9853 sec, memory +3.009M (1.341M -> 4.349M); from OS: +3.070M (143.4M -> 146.4M)
+
+executing:  ~hal/bin/carmel -rIQEb -k 1 .tmp.fst.0 .tmp.fst.1 .tmp.fst.strings > .tmp.output
+after  training, P/R/F =  (0.76000000000000001, 0.40425531914893614, 0.52777777777777779)
+
+
+>>> output = runTest(channel=buildSegmentChannelModel)
+executing:  ~hal/bin/carmel -rIQEb -k 1 .tmp.fst.0 .tmp.fst.1 .tmp.fst.strings > .tmp.output
+before training, P/R/F =  (1.0, 0.0, 0.0)
+executing:  ~hal/bin/carmel -rtDHJ .tmp.fst .tmp.fst.strings > .tmp.output.fst
+
+Using random seed -R 3916410295
+.....................................................................1540
+.................................................................
+i=1 (rate=1): probability=2^-36656.2 per-symbol-perplexity(N=25411)=2^1.44253 per-example-perplexity(N=2975)=2^12.3214 (new best)
+Initial best start point ppx=2^12.3214
+.....................................................................1540
+.................................................................
+i=2 (rate=1): probability=2^-9.3797e-11 per-symbol-perplexity(N=25411)=2^3.6912e-15 per-example-perplexity(N=2975)=2^3.15284e-14 (new best) (relative-perplexity-ratio=0)
+Converged - maximum weight change less than 0.0001 after 2 iterations.
+Setting weights to model with lowest per-example-perplexity ( = prod[modelprob(example)]^(-1/num_examples) = 2^(-log_2(p_model(corpus))/N) = 2^3.15284e-14
+Training took 47.607 sec, memory +7.633M (3.081M -> 10.71M); from OS: +7.121M (137.8M -> 144.9M)
+
+executing:  ~hal/bin/carmel -rIQEb -k 1 .tmp.fst.0 .tmp.fst.1 .tmp.fst.strings > .tmp.output
+after  training, P/R/F =  (1.0, 0.0, 0.0)
+
+</pre>
+
+What this suggests is that the segment channel model isn't all that
+it's cracked up to be.<p/>
+
+This part of the assignment is worth <b>50%</b> of your
+grade.  <b>40%</b> is for correctly implementing these two functions.
+The last <b>10%</b> is for how well you can do on the <i>test
+  data</i>.  You are welcome to do whatever you want to build a finite
+state machine for solving this problem.  You should implement these
+in <tt>fancySourceModel</tt> and <tt>fancyChannelModel</tt>.  You can
+run then by saying:
+
+<pre>
+>>> output = runTest(source=fancySourceModel,channel=fancyChannelModel)
+</pre>
+
+Once you're happy, you can try running on the test data, and saving
+your output to disk.
+
+<pre>
+>>> output = runTest(devFile="bengali.test",source=fancySourceModel,channel=fancyChannelModel)
+>>> saveOutput('bengali.test.predictions', output)
+</pre>
+
+This test predictions file is what you should hand in.  Every night at
+midnight we'll evaluate your test predictions and post your score on
+the <a href="leaderboard.html">leaderboard</a>, along with a baseline
+submission using the segment channel model and bigram source model.
+For every point of F that you beat this baseline by, you'll get 1%
+added to your grade.  Additionally, the first place team will get
+another 5%, the second place team will get another 4%, the third place
+team will get another 3% and anyone who beats the baseline <i>by at
+least 0.01</i> will get an almost free 2%.
+
+</body>
+</html>
