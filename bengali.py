@@ -1,6 +1,7 @@
 import FSM
 import util
-import collections
+from util import Counter
+from FSM import runFST
 
 def readData(filename):
     h = open(filename, 'r')
