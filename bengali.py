@@ -133,9 +133,36 @@ def buildSegmentChannelModel(words, segmentations):
     fst = FSM.FSM(isTransducer=True, isProbabilistic=True)
     fst.setInitialState('start')
     fst.setFinalState('end')
-    ### TODO: YOUR CODE HERE
-    #util.raiseNotDefined()
-    
+
+    # Low probability edges to account for unseen words
+    #!! TODO . to . is only a-Z - need to 
+    fst.addEdge('start', 'start', '.', '.', prob=0.1)
+    fst.addEdge('start', 'start', '+', None, prob=0.1)
+
+    character_list = {}
+
+    for segmented_words in segmentations:
+
+        # Putting lit of segments into set removes duplicates
+        segments_list = segmented_words.split('+')
+        segments_set = set(segments_list)
+
+        for seg in segments_set:
+
+            fst.addEdge('start', seg[0], seg[0], seg[0], prob=1)
+
+            partial_seg = seg[0]
+            seg_less_first_letter = seg[1:]
+
+            for letter in seg_less_first_letter:
+                if not character_list.contains_key(letter): character_list
+                fst.addEdge(partial_seg, partial_seg + letter, letter, letter, prob=1)
+                partial_seg += letter
+
+        #Add transitions for end of seg to final and back to start for plus
+        fst.addEdge(seg, 'end', None, None, prob=1)
+        fst.addEdge(seg, 'start', '+', None, prob=1)
+
 
     return fst
 
