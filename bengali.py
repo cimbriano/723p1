@@ -22,6 +22,7 @@ def evaluate(truth, hypothesis):
     T = 0
     H = 0
     for n in range(len(truth)):
+        if truth[n] is None: continue
         t = truth[n].split('+')
         allT = {}
         cumSum = 0
