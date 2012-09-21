@@ -120,8 +120,12 @@ def bigramSourceModel(segmentations):
     # Transitions between character states or to 'end'
     for char in lm.keys():
         if not char == 'start':
-            for second_char in lm[char]:        
-                fsa.addEdge(char, second_char, second_char, prob=lm[char][second_char])
+            for second_char in lm[char]:
+                if second_char == 'end':
+                    fsa.addEdge(char, second_char, None, prob=lm[char][second_char])
+                else:
+                    fsa.addEdge(char, second_char, second_char, prob=lm[char][second_char])
+
     
     return fsa
 
