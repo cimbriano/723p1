@@ -174,7 +174,97 @@ def buildSegmentChannelModel(words, segmentations):
 
 
 def fancySouceModel(segmentations):
-    raise Exception("fancySouceModel not defined")
+
+    # compute all trigrams
+    lm = {}
+    vocab = {}
+    vocab['end'] = 1
+
+    for s in segmentations:
+        prev2 = 'start'
+        prev1 = 'start'
+
+        for c in s:
+            if not lm.has_key(prev2):
+                lm[prev2] = {}
+
+            if not lm[prev2].has_key(prev1):
+                lm[prev2][prev1] = Counter()
+            
+            # print("prev2 = " + prev2)
+            # print("prev1 = " + prev1)
+            # print("char  = " + c)
+
+            # print("word = " + s)
+
+            lm[prev2][prev1][c] = lm[prev2][prev1][c] + 1
+
+            # print("Trigram: " + prev2 + " " + prev1 + " " + c)
+
+            prev2 = prev1
+            prev1 = c
+            vocab[c] = 1
+
+
+        if not lm.has_key(prev2):
+            lm[prev2] = {}
+        if not lm[prev2].has_key(prev1):
+            lm[prev2][prev1] = Counter()
+
+        lm[prev2][prev1]['end'] = lm[prev2][prev1]['end'] + 1
+
+    vocab['start'] = 1
+    vocab['end'] = 1
+
+
+    # smooth and normalize
+    for prev2 in vocab.iterkeys():
+        if not lm.has_key(prev2):
+            lm[prev2] = {}
+
+
+        for prev1 in vocab.iterkeys():
+            if not lm[prev2].has_key(prev1):
+                lm[prev2][prev1] = Counter()
+
+            for c in vocab.iterkeys():
+                lm[prev2][prev1][c] = lm[prev2][prev1][c] + 0.5   # add 0.5 smoothing
+            lm[prev2][prev1].normalize()
+
+    # convert to a FSA
+    fsa = FSM.FSM(isProbabilistic=True)
+    fsa.setInitialState('start')
+    fsa.setFinalState('end')
+
+
+    
+    # Character states in bigram model
+    for first_char in vocab.iterkeys():
+        #print("first_char = " + first_char)
+
+        fsa.addEdge('start', first_char, first_char, lm['start']['start'][first_char])
+
+        #print(lm['start'][first_char])
+
+        for second_char in vocab.iterkeys():
+            #print("second_char = " + second_char)
+            fsa.addEdge(first_char, first_char + second_char, second_char, lm['start'][first_char][second_char])
+
+
+    # # Transitions between character states or to 'end'
+    for first in vocab.iterkeys():
+        if not first == 'start':
+
+            for second in vocab.iterkeys():
+                if not second == 'start':
+
+                    for c in vocab.iterkeys():
+                        if c == 'end':
+                            fsa.addEdge(first + second, 'end', None, prob=lm[first][second][c])
+                        else:
+                            fsa.addEdge(first + second, second + c, c, prob=lm[first][second][c])
+
+    return fsa
 
 def fancyChannelModel(words, segmentations):
     raise Exception("fancyChannelModel not defined")
