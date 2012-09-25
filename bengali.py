@@ -135,28 +135,30 @@ def buildSegmentChannelModel(words, segmentations):
     fst.setFinalState('end')
 
     character_list = {}
+    segments_list = {}
 
     for segmented_words in segmentations:
 
         # Putting lit of segments into set removes duplicates
-        segments_list = segmented_words.split('+')
-        segments_set = set(segments_list)
+        segments = segmented_words.split('+')
 
-        for seg in segments_set:
 
-            fst.addEdge('start', seg[0], seg[0], seg[0], prob=1)
+        for seg in segments:
+            if not segments_list.has_key(seg): 
+                segments_list[seg] = 1
+                fst.addEdge('start', seg[0], seg[0], seg[0], prob=1)
 
-            partial_seg = seg[0]
-            seg_less_first_letter = seg[1:]
+                partial_seg = seg[0]
+                seg_less_first_letter = seg[1:]
 
-            for letter in seg_less_first_letter:
-                if not character_list.has_key(letter): character_list[letter] = 1
-                fst.addEdge(partial_seg, partial_seg + letter, letter, letter, prob=1)
-                partial_seg += letter
+                for letter in seg_less_first_letter:
+                    if not character_list.has_key(letter): character_list[letter] = 1
+                    fst.addEdge(partial_seg, partial_seg + letter, letter, letter, prob=1)
+                    partial_seg += letter
 
-        #Add transitions for end of seg to final and back to start for plus
-        fst.addEdge(seg, 'end', None, None, prob=1)
-        fst.addEdge(seg, 'start', '+', None, prob=1)
+            #Add transitions for end of seg to final and back to start for plus
+            fst.addEdge(seg, 'end', None, None, prob=1)
+            fst.addEdge(seg, 'start', '+', None, prob=1)
 
 
     # Low probability edges to account for unseen words
@@ -211,5 +213,6 @@ def saveOutput(filename, output):
     
 
 if __name__ == '__main__':
-    output = runTest(devFile='bengali.test')
-    saveOutput('bengali.test.predictions', output)
+    runTest()
+    #output = runTest(devFile='bengali.test')
+    #saveOutput('bengali.test.predictions', output)
