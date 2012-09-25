@@ -134,11 +134,6 @@ def buildSegmentChannelModel(words, segmentations):
     fst.setInitialState('start')
     fst.setFinalState('end')
 
-    # Low probability edges to account for unseen words
-    #!! TODO . to . is only a-Z - need to 
-    fst.addEdge('start', 'start', '.', '.', prob=0.1)
-    fst.addEdge('start', 'start', '+', None, prob=0.1)
-
     character_list = {}
 
     for segmented_words in segmentations:
@@ -155,7 +150,7 @@ def buildSegmentChannelModel(words, segmentations):
             seg_less_first_letter = seg[1:]
 
             for letter in seg_less_first_letter:
-                if not character_list.contains_key(letter): character_list
+                if not character_list.has_key(letter): character_list[letter] = 1
                 fst.addEdge(partial_seg, partial_seg + letter, letter, letter, prob=1)
                 partial_seg += letter
 
@@ -163,6 +158,15 @@ def buildSegmentChannelModel(words, segmentations):
         fst.addEdge(seg, 'end', None, None, prob=1)
         fst.addEdge(seg, 'start', '+', None, prob=1)
 
+
+    # Low probability edges to account for unseen words
+    for letter in character_list.keys():
+        fst.addEdge('start', 'start', letter, letter, prob=0.1)
+    
+    #fst.addEdge('start', 'end', None, None, prob=0.1)
+    fst.addEdge('start', 'intermediate', None, None, prob=0.1)
+    fst.addEdge('intermediate', 'start', '+', None, prob=0.1)
+    fst.addEdge('intermediate', 'end', None, None, prob=0.1)
 
     return fst
 
@@ -174,7 +178,7 @@ def fancyChannelModel(words, segmentations):
     raise Exception("fancyChannelModel not defined")
 
     
-def runTest(trainFile='bengali.train', devFile='bengali.dev', channel=stupidChannelModel, source=bigramSourceModel):
+def runTest(trainFile='bengali.train', devFile='bengali.dev', channel=buildSegmentChannelModel, source=bigramSourceModel ):
     (words, segs) = readData(trainFile)
     (wordsDev, segsDev) = readData(devFile)
     fst = channel(words, segs)
@@ -207,4 +211,5 @@ def saveOutput(filename, output):
     
 
 if __name__ == '__main__':
-    runTest()
+    output = runTest(devFile='bengali.test')
+    saveOutput('bengali.test.predictions', output)
