@@ -267,10 +267,10 @@ def fancySouceModel(segmentations):
     return fsa
 
 def fancyChannelModel(words, segmentations):
-    raise Exception("fancyChannelModel not defined")
-
+    return buildSegmentChannelModel(words, segmentations)
     
-def runTest(trainFile='bengali.train', devFile='bengali.dev', channel=buildSegmentChannelModel, source=fancySouceModel ):
+    
+def runTest(trainFile='bengali.train', devFile='bengali.dev', channel=fancyChannelModel, source=fancySouceModel ):
     (words, segs) = readData(trainFile)
     (wordsDev, segsDev) = readData(devFile)
     fst = channel(words, segs)
@@ -303,7 +303,7 @@ def saveOutput(filename, output):
     
 
 if __name__ == '__main__':
-    runTest()
+    #runTest()
     
-    # output = runTest(devFile='bengali.test')
-    # saveOutput('bengali.test.predictions', output)
+    output = runTest(devFile='bengali.test')
+    saveOutput('bengali.test.predictions', output)
